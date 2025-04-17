@@ -234,15 +234,15 @@ const ChatDashboard = () => {
   const handleSendMessage = async (e) => {
     e.preventDefault();
     if (!inputValue.trim() || !activeConversation || !user || loading.ai) return;
-
+  
     const messageText = inputValue.trim();
     setInputValue('');
     setIsTyping(true);
-
+  
     try {
       setLoading(prev => ({ ...prev, ai: true, general: true }));
       setError(null);
-      
+  
       // Add user message
       await addDoc(collection(db, 'messages'), {
         text: messageText,
@@ -251,7 +251,7 @@ const ChatDashboard = () => {
         conversationId: activeConversation,
         timestamp: serverTimestamp()
       });
-
+  
       // Get recent messages for context
       const messagesQuery = query(
         collection(db, 'messages'),
@@ -263,7 +263,7 @@ const ChatDashboard = () => {
       const recentMessages = snapshot.docs
         .map(doc => ({ id: doc.id, ...doc.data() }))
         .reverse();
-
+  
       // Prepare messages for API
       const apiMessages = [
         {
@@ -279,37 +279,37 @@ const ChatDashboard = () => {
           content: messageText
         }
       ];
-
-      // Get AI response from OpenRouter API
+  
+      // API Call to OpenRouter
       const response = await fetch("https://openrouter.ai/api/v1/chat/completions", {
         method: "POST",
         headers: {
           "Authorization": `Bearer ${import.meta.env.VITE_APIKEY}`,
-          "HTTP-Referer": window.location.href,
-          "X-Title": "AI Chat App",
+          "HTTP-Referer": window.location.href, // 🔁 Replace with your actual site URL
+          "X-Title": "LexiAI Chat",                  // 🔁 Replace with your app/site name
           "Content-Type": "application/json"
         },
         body: JSON.stringify({
-          "model": "openai/gpt-3.5-turbo", // More reliable free model
+          "model": "deepseek/deepseek-chat-v3-0324:free",
           "messages": apiMessages,
           "temperature": 0.7
         })
       });
-
+  
       if (!response.ok) {
         const errorData = await response.json();
         console.error("API Error Details:", errorData);
         throw new Error(errorData.error?.message || `API request failed with status ${response.status}`);
       }
-
+  
       const data = await response.json();
-      console.log("API Response:", data); // Debug log
-      
+      console.log("API Response:", data);
+  
       const aiResponse = data.choices[0]?.message?.content;
       if (!aiResponse) {
         throw new Error("No response content from AI");
       }
-
+  
       // Add AI response
       await addDoc(collection(db, 'messages'), {
         text: aiResponse,
@@ -317,20 +317,20 @@ const ChatDashboard = () => {
         conversationId: activeConversation,
         timestamp: serverTimestamp()
       });
-
+  
       // Update conversation title if first message
       if (messages.length <= 1) {
         const conversationRef = doc(db, 'conversations', activeConversation);
-        const title = messageText.length > 30 
-          ? `${messageText.substring(0, 30)}...` 
+        const title = messageText.length > 30
+          ? `${messageText.substring(0, 30)}...`
           : messageText;
         await updateDoc(conversationRef, { title });
       }
-
+  
     } catch (error) {
       console.error("Full Error:", error);
       setError(error.message || "Failed to send message");
-      
+  
       // Add error message to chat
       await addDoc(collection(db, 'messages'), {
         text: `Error: ${error.message}`,
@@ -344,6 +344,7 @@ const ChatDashboard = () => {
       setIsTyping(false);
     }
   };
+  
 
   const startNewConversation = async () => {
     if (!user) return;
