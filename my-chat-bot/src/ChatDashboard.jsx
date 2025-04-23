@@ -18,7 +18,14 @@ import remarkGfm from 'remark-gfm';
 import './App.css';
 
 const ChatDashboard = () => {
-  const [user] = useAuthState(auth);
+  const [user, loadingUser, errorUser] = useAuthState(auth, {
+    onUserChanged: async (user) => {
+      if (!user) {
+        // Handle signed out user
+        navigate('/login');
+      }
+    },
+  });
   const [messages, setMessages] = useState([]);
   const [inputValue, setInputValue] = useState('');
   const [conversations, setConversations] = useState([]);
@@ -40,20 +47,28 @@ const ChatDashboard = () => {
   const navigate = useNavigate();
   const [messageFeedback, setMessageFeedback] = useState({});
 
-  // OpenAI API configuration
-  const OPENAI_API_KEY = import.meta.env.VITE_OPENAI_API_KEY;
-  const OPENAI_ENDPOINT = 'https://api.openai.com/v1/chat/completions';
+  // Enhanced auth state handling
+  useEffect(() => {
+    const unsubscribe = auth.onAuthStateChanged((user) => {
+      if (!user && !loadingUser) {
+        navigate('/login');
+      }
+    });
+    return unsubscribe;
+  }, [navigate, loadingUser]);
 
-  // Get AI response from OpenAI API
+  // Get AI response from OpenRouter API
   const getAIResponse = async (userMessage, contextMessages = []) => {
-    if (!OPENAI_API_KEY) {
-      throw new Error('OpenAI API key is not configured');
-    }
-
     try {
+      if (!import.meta.env.VITE_APIKEY) {
+        throw new Error('API key is not configured');
+      }
+
       const headers = {
         'Content-Type': 'application/json',
-        'Authorization': `Bearer ${OPENAI_API_KEY}`
+        'Authorization': `Bearer ${import.meta.env.VITE_APIKEY}`,
+        'HTTP-Referer': window.location.href,
+        'X-Title': 'LexiAI Chat'
       };
 
       // Format the conversation history for the API
@@ -73,14 +88,14 @@ const ChatDashboard = () => {
       ];
 
       const body = {
-        model: 'gpt-3.5-turbo',
+        model: 'deepseek/deepseek-chat-v3-0324:free',
         messages,
         temperature: 0.7,
         max_tokens: 1000
       };
 
-      const response = await fetch(OPENAI_ENDPOINT, {
-        method: 'POST',
+      const response = await fetch("https://openrouter.ai/api/v1/chat/completions", {
+        method: "POST",
         headers,
         body: JSON.stringify(body)
       });
@@ -94,7 +109,7 @@ const ChatDashboard = () => {
       return data.choices[0].message.content;
 
     } catch (error) {
-      console.error('OpenAI API Error:', error);
+      console.error('AI API Error:', error);
       throw new Error(`AI service error: ${error.message}`);
     }
   };
@@ -264,51 +279,8 @@ const ChatDashboard = () => {
         .map(doc => ({ id: doc.id, ...doc.data() }))
         .reverse();
   
-      // Prepare messages for API
-      const apiMessages = [
-        {
-          role: 'system',
-          content: 'You are a helpful AI assistant. Answer questions clearly and concisely.'
-        },
-        ...recentMessages.slice(0, -1).map(msg => ({
-          role: msg.sender === 'user' ? 'user' : 'assistant',
-          content: msg.text
-        })),
-        {
-          role: 'user',
-          content: messageText
-        }
-      ];
-  
-      // API Call to OpenRouter
-      const response = await fetch("https://openrouter.ai/api/v1/chat/completions", {
-        method: "POST",
-        headers: {
-          "Authorization": `Bearer ${import.meta.env.VITE_APIKEY}`,
-          "HTTP-Referer": window.location.href, // 🔁 Replace with your actual site URL
-          "X-Title": "LexiAI Chat",                  // 🔁 Replace with your app/site name
-          "Content-Type": "application/json"
-        },
-        body: JSON.stringify({
-          "model": "deepseek/deepseek-chat-v3-0324:free",
-          "messages": apiMessages,
-          "temperature": 0.7
-        })
-      });
-  
-      if (!response.ok) {
-        const errorData = await response.json();
-        console.error("API Error Details:", errorData);
-        throw new Error(errorData.error?.message || `API request failed with status ${response.status}`);
-      }
-  
-      const data = await response.json();
-      console.log("API Response:", data);
-  
-      const aiResponse = data.choices[0]?.message?.content;
-      if (!aiResponse) {
-        throw new Error("No response content from AI");
-      }
+      // Get AI response
+      const aiResponse = await getAIResponse(messageText, recentMessages);
   
       // Add AI response
       await addDoc(collection(db, 'messages'), {
@@ -344,7 +316,6 @@ const ChatDashboard = () => {
       setIsTyping(false);
     }
   };
-  
 
   const startNewConversation = async () => {
     if (!user) return;
@@ -486,6 +457,29 @@ const ChatDashboard = () => {
       console.error("Failed to update feedback", err);
     }
   };
+
+  if (loadingUser) {
+    return (
+      <div className="loading-screen">
+        <Loader2 className="animate-spin" size={48} />
+        <p>Loading...</p>
+      </div>
+    );
+  }
+
+  if (errorUser) {
+    return (
+      <div className="error-screen">
+        <AlertCircle size={48} />
+        <p>Authentication error: {errorUser.message}</p>
+        <button onClick={() => window.location.reload()}>Retry</button>
+      </div>
+    );
+  }
+
+  if (!user) {
+    return null; // Redirect handled by useEffect
+  }
 
   return (
     <div className={`dashboard ${isMobile && !isSidebarOpen ? 'sidebar-closed' : ''}`}>

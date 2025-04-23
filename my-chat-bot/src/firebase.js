@@ -52,7 +52,7 @@ export {
   onAuthStateChanged,
   signOut,
   GoogleAuthProvider,
-  signInWithPopup, // ✅ for Google Sign-In
+  signInWithPopup,
   collection,
   addDoc,
   doc,
