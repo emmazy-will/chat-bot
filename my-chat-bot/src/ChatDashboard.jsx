@@ -63,14 +63,14 @@ const ChatDashboard = () => {
       if (!import.meta.env.VITE_APIKEY) {
         throw new Error('API key is not configured');
       }
-
+  
       const headers = {
         'Content-Type': 'application/json',
         'Authorization': `Bearer ${import.meta.env.VITE_APIKEY}`,
         'HTTP-Referer': window.location.href,
         'X-Title': 'LexiAI Chat'
       };
-
+  
       // Format the conversation history for the API
       const messages = [
         {
@@ -86,34 +86,40 @@ const ChatDashboard = () => {
           content: userMessage
         }
       ];
-
+  
       const body = {
         model: 'deepseek/deepseek-chat-v3-0324:free',
         messages,
         temperature: 0.7,
         max_tokens: 1000
       };
-
+  
       const response = await fetch("https://openrouter.ai/api/v1/chat/completions", {
         method: "POST",
         headers,
         body: JSON.stringify(body)
       });
-
+  
       if (!response.ok) {
         const errorData = await response.json();
         throw new Error(errorData.error?.message || 'Failed to get AI response');
       }
-
+  
       const data = await response.json();
       return data.choices[0].message.content;
-
+  
     } catch (error) {
       console.error('AI API Error:', error);
+  
+      // Detect network errors specifically
+      if (error instanceof TypeError && error.message === 'Failed to fetch') {
+        throw new Error('Network error: Please check your internet connection and try again.');
+      }
+  
       throw new Error(`AI service error: ${error.message}`);
     }
   };
-
+  
   // Debounced window resize handler
   const handleResize = useCallback(debounce(() => {
     const mobile = window.innerWidth < 768;
@@ -775,21 +781,21 @@ const ChatDashboard = () => {
           <div ref={messagesEndRef} />
         </div>
 
-        {/* Error message */}
         {error && (
-          <div className="error-message" style={{ backgroundColor: '#2b2d31', borderColor: '#8a2be2' }}>
-            <AlertCircle size={16} color="#8a2be2" />
-            <span style={{ color: 'white' }}>{error}</span>
-            <button 
-              className="error-close"
-              onClick={() => setError(null)}
-              aria-label="Dismiss error"
-              style={{ color: 'white' }}
-            >
-              <X size={14} />
-            </button>
-          </div>
-        )}
+        <div className="error-message" style={{ backgroundColor: '#2b2d31', borderColor: '#8a2be2' }}>
+          <AlertCircle size={16} color="#8a2be2" />
+          <span style={{ color: 'white' }}>{error}</span>
+          <button 
+            className="error-close"
+            onClick={() => setError(null)}
+            aria-label="Dismiss error"
+            style={{ color: 'white' }}
+          >
+            <X size={14} />
+          </button>
+        </div>
+      )}
+
 
         {/* Input Area */}
         <form className="input-area" onSubmit={handleSendMessage} style={{ backgroundColor: '#6E48AA' }}>

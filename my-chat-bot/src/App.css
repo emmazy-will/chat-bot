@@ -333,9 +333,9 @@
 /* Message styles */
 .message {
   display: flex;
-  gap: 16px;
+  gap: 46px;
   margin-bottom: 20px;
-  max-width: 800px;
+  max-width: 2800px;
   margin-left: auto;
   margin-right: auto;
   width: 100%;
@@ -366,9 +366,7 @@
   color: white;
 }
 
-.message-content {
-  max-width: calc(100% - 48px);
-}
+
 
 .message-text {
   padding: 12px 16px;
@@ -383,8 +381,9 @@
   color: white;
   border-radius: 18px 18px 0 18px; /* WhatsApp-style bubble */
   padding: 10px 14px;
-  max-width: 75%;
   margin: 5px 0;
+  width: 100%;
+  font-size: 15px;
   align-self: flex-end;
   display: inline-block;
   word-wrap: break-word;
@@ -973,9 +972,9 @@
   padding-left: 10px;
 }
 .message-actions-container{
-  margin-left: 170px;
+  margin-left: 300px;
   display: flex; 
-  gap: 8px;
+  gap: 5px;
   justify-content: flex-start;
   padding: 0 16px;
   margin-top: 16px;
@@ -990,10 +989,6 @@
     text-decoration: none;
     transition: color 0.2s ease;
     text-align: center;
-  }
-  .message-actions-container{
-    margin-right: 100px;
-    gap: 4px;
   }
   
   .footer-link:hover {
@@ -1022,6 +1017,7 @@
   .mobile-menu-button {
     display: block;
   }
+  
   
   .mobile-nav {
     position: absolute;
@@ -1126,6 +1122,22 @@
   .message-content {
     max-width: calc(100% - 44px);
   }
+  .message-actions-container{
+    margin-left: 200px;
+    display: flex; 
+    gap: 8px;
+    justify-content: flex-start;
+    padding: 0 16px;
+    margin-top: 16px;
+    padding-bottom: 10px;
+  }
+  .message.user .message-text {
+    background-color: #6E48AA;
+    color: white;
+    
+  }
+  
+  
 
   .message-text {
     padding: 8px 12px;
